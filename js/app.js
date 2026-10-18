@@ -17,6 +17,7 @@ class OlympiadApp {
       streak: 0,                // 當前連勝數
       maxStreak: 0,             // 歷史最高連勝
       points: 0,                // 積分 / XP
+      showAllExplanations: {},   // 記錄展開全部 4 種年齡講解的題目 ID
       // 考場模式計時
       exam: {
         active: false,
@@ -581,36 +582,53 @@ class OlympiadApp {
             </div>
           </div>
 
-          <!-- 四個選項按鈕 -->
-          <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- 正確答案與解答醒目標誌 (學習解答模式或已答題時顯示) -->
+          <div class="mt-4 p-3.5 rounded-xl bg-emerald-50 border-2 border-emerald-500/80 text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs">
+            <div class="flex items-center gap-2.5">
+              <span class="w-7 h-7 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow-xs">
+                ✓
+              </span>
+              <div>
+                <span class="text-xs text-emerald-700 font-bold uppercase tracking-wider block">標準解答與答案</span>
+                <span class="text-base font-black text-emerald-900">
+                  正確答案：<span class="text-emerald-700 underline underline-offset-2">選項 ${q.answer}</span>（數值：<span class="text-emerald-800 font-mono">${q.answerVal}</span>）
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 self-end sm:self-center">
+              <button onclick="app.openLabModal('${q.id}')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white hover:bg-emerald-100/80 text-emerald-800 border border-emerald-300 transition-colors flex items-center gap-1 shadow-xs">
+                <span>🔍</span>
+                <span>跨年齡 4 維解析對照</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 四個選項展示 -->
+          <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             ${q.options.map(opt => {
-              let optClass = 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700';
-              let optBadge = '';
+              const isCorrectOpt = opt.val === q.answer;
+              let optClass = isCorrectOpt 
+                ? 'bg-emerald-50/90 border-2 border-emerald-500 text-emerald-950 font-bold ring-2 ring-emerald-400/20 shadow-xs' 
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50';
+              let optBadge = isCorrectOpt ? '<span class="ml-auto text-emerald-700 font-bold text-xs bg-emerald-100 px-2 py-0.5 rounded-md">✓ 正確答案</span>' : '';
 
               if (userAns) {
-                if (opt.val === q.answer) {
-                  optClass = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold ring-2 ring-emerald-500/30';
-                  optBadge = '<span class="ml-auto text-emerald-600 font-bold text-xs">✓ 正確解答</span>';
-                } else if (opt.val === userAns.selected) {
+                if (opt.val === userAns.selected && !isCorrectOpt) {
                   optClass = 'bg-rose-50 border-rose-500 text-rose-900 font-bold ring-2 ring-rose-500/30';
                   optBadge = '<span class="ml-auto text-rose-600 font-bold text-xs">✗ 你的選擇</span>';
-                } else {
-                  optClass = 'bg-slate-50 border-slate-200 text-slate-400 opacity-60';
                 }
               }
 
               return `
-                <button onclick="app.submitAnswer('${q.id}', '${opt.val}')"
-                        ${userAns ? 'disabled' : ''}
-                        class="flex items-center p-3.5 rounded-xl border text-sm font-medium transition-all duration-200 text-left ${optClass}">
+                <div class="flex items-center p-3.5 rounded-xl border text-sm font-medium transition-all duration-200 text-left ${optClass}">
                   <span class="w-7 h-7 rounded-lg flex items-center justify-center font-black mr-3 ${
-                    userAns && opt.val === q.answer ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'
+                    isCorrectOpt ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'
                   }">
                     ${opt.val}
                   </span>
                   <span class="flex-1">${opt.text}</span>
                   ${optBadge}
-                </button>
+                </div>
               `;
             }).join('')}
           </div>
@@ -648,13 +666,23 @@ class OlympiadApp {
             </div>
           ` : ''}
 
-          <!-- 解析區塊：核心亮點！可切換 4 種難度/視角 -->
+          <!-- 解析區塊：核心亮點！可切換 4 種難度/視角 或 一次展開全部 -->
           <div class="mt-5 pt-5 border-t border-slate-100">
-            <!-- 解析難度切換小標籤 -->
+            <!-- 解析難度切換小標籤與全部展開按鈕 -->
             <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
-              <div class="flex items-center gap-1 text-xs font-bold text-slate-700">
-                <span>📖 本題詳細多維解析：</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-800">📖 解答說明與推導：</span>
+                <button onclick="app.toggleShowAllExplanations('${q.id}')" 
+                        class="text-xs px-2.5 py-1 rounded-md font-semibold ${
+                          this.state.showAllExplanations && this.state.showAllExplanations[q.id]
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                        } transition-colors">
+                  ${this.state.showAllExplanations && this.state.showAllExplanations[q.id] ? '收合為單一視角' : '⚡ 一次並排看 4 種年齡講解'}
+                </button>
               </div>
+
+              <!-- 單重視角切換按鈕 -->
               <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
                 ${Object.keys(this.meta.explanationStyles).map(sKey => {
                   const sObj = this.meta.explanationStyles[sKey];
@@ -672,32 +700,60 @@ class OlympiadApp {
               </div>
             </div>
 
-            <!-- 解析卡片內容 -->
-            <div class="rounded-xl border p-4 sm:p-5 ${styleMeta.color} transition-all duration-300">
-              <div class="flex items-center justify-between pb-2 border-b border-black/10">
-                <span class="font-bold text-sm flex items-center gap-1.5">
-                  <span>${styleMeta.icon}</span>
-                  <span>${curExplanation.title}</span>
-                </span>
-                <span class="text-xs px-2 py-0.5 rounded-full bg-white/80 border border-black/10 font-medium">
-                  ${styleMeta.badge}
-                </span>
+            ${this.state.showAllExplanations && this.state.showAllExplanations[q.id] ? `
+              <!-- 四種不同年齡解法同時展示 -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+                ${Object.keys(this.meta.explanationStyles).map(sKey => {
+                  const sObj = this.meta.explanationStyles[sKey];
+                  const exp = q.explanations[sKey] || q.explanations['standard'];
+                  return `
+                    <div class="rounded-xl border p-4 ${sObj.color} flex flex-col justify-between">
+                      <div>
+                        <div class="flex items-center justify-between pb-2 border-b border-black/10">
+                          <span class="font-bold text-sm flex items-center gap-1.5">
+                            <span>${sObj.icon}</span>
+                            <span>${exp.title}</span>
+                          </span>
+                          <span class="text-xs px-2 py-0.5 rounded-full bg-white/80 border border-black/10 font-medium">
+                            ${sObj.badge}
+                          </span>
+                        </div>
+                        <div class="mt-3 text-xs leading-relaxed math-rendered-body">
+                          ${this.formatMarkdownText(exp.content)}
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
               </div>
+            ` : `
+              <!-- 單一選定視角卡片內容 -->
+              <div class="rounded-xl border p-4 sm:p-5 ${styleMeta.color} transition-all duration-300">
+                <div class="flex items-center justify-between pb-2 border-b border-black/10">
+                  <span class="font-bold text-sm flex items-center gap-1.5">
+                    <span>${styleMeta.icon}</span>
+                    <span>${curExplanation.title}</span>
+                  </span>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-white/80 border border-black/10 font-medium">
+                    ${styleMeta.badge}
+                  </span>
+                </div>
 
-              <!-- 解題內文 -->
-              <div class="mt-3 text-xs sm:text-sm leading-relaxed math-rendered-body">
-                ${this.formatMarkdownText(curExplanation.content)}
-              </div>
+                <!-- 解題內文 -->
+                <div class="mt-3 text-xs sm:text-sm leading-relaxed math-rendered-body">
+                  ${this.formatMarkdownText(curExplanation.content)}
+                </div>
 
-              <!-- 奧數核心心法金色卡片 -->
-              <div class="mt-4 p-3 rounded-lg bg-amber-100/80 border border-amber-300 text-amber-950 text-xs flex items-center gap-2">
-                <span class="text-base shrink-0">🎯</span>
-                <div>
-                  <strong class="font-bold">奧數通關心法：</strong>
-                  <span>${q.keyTakeaway}</span>
+                <!-- 奧數核心心法金色卡片 -->
+                <div class="mt-4 p-3 rounded-lg bg-amber-100/80 border border-amber-300 text-amber-950 text-xs flex items-center gap-2">
+                  <span class="text-base shrink-0">🎯</span>
+                  <div>
+                    <strong class="font-bold">奧數通關心法：</strong>
+                    <span>${q.keyTakeaway}</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            `}
           </div>
 
         </div>
@@ -705,6 +761,13 @@ class OlympiadApp {
     }).join('');
 
     this.renderMathJax();
+  }
+
+  toggleShowAllExplanations(qId) {
+    sound.click();
+    if (!this.state.showAllExplanations) this.state.showAllExplanations = {};
+    this.state.showAllExplanations[qId] = !this.state.showAllExplanations[qId];
+    this.renderQuestionList();
   }
 
   // ------------------------------------------------
