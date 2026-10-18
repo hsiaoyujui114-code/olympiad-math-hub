@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>奧林匹亞數學初賽歷屆試題與多維解析互動平台</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- KaTeX for beautiful math notation -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Confetti for celebratory animations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased selection:bg-blue-100 selection:text-blue-900">
+
+  <!-- ========================================== -->
+  <!-- 頂部全局導覽列 (Global Header) -->
+  <!-- ========================================== -->
+  <header id="global-header" class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 transition-opacity duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Logo 與主標題 -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="app.changeGrade()">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-500 flex items-center justify-center text-white text-xl shadow-md shadow-blue-500/20">
+          🏆
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-black text-slate-900 leading-tight">
+            奧林匹亞試題館
+          </h1>
+          <p class="text-xs text-slate-500 font-medium hidden sm:block">
+            多維解析 • 10年真題 • 免伺服器靜態架構
+          </p>
+        </div>
+      </div>
+
+      <!-- 中間快速切換狀態 (年級、賽事、當前解題視角) -->
+      <div class="flex items-center gap-2">
+        <button id="header-grade-pill" onclick="app.changeGrade()" class="px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors flex items-center">
+          <!-- 動態填入 -->
+        </button>
+
+        <button id="header-comp-pill" onclick="app.changeCompetition()" class="px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors hidden sm:flex items-center">
+          <!-- 動態填入 -->
+        </button>
+
+        <!-- 當前解題風格快切 -->
+        <button id="header-style-pill" onclick="window.scrollTo({top: 300, behavior: 'smooth'})" class="px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors flex items-center shadow-xs">
+          <!-- 動態填入 -->
+        </button>
+      </div>
+
+      <!-- 右側輔助工具 (連勝、草稿紙、音效) -->
+      <div class="flex items-center gap-2">
+        <!-- 連勝指示 -->
+        <div id="header-streak-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-700 border border-orange-200 hidden md:block">
+          🔥 0 連對
+        </div>
+
+        <div id="header-xp-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 hidden md:block">
+          ⭐ 0 XP
+        </div>
+
+        <!-- 開啟草稿計算紙 -->
+        <button onclick="window.scratchpad.toggle()" class="p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 transition-colors flex items-center gap-1.5 text-xs font-semibold" title="打開草稿紙 (手繪/算式)">
+          <span>📝</span>
+          <span class="hidden sm:inline">計算紙</span>
+        </button>
+
+        <!-- 音效切換 -->
+        <button onclick="const on = window.sound.toggle(); this.textContent = on ? '🔊' : '🔇';" class="p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 transition-colors text-base" title="開啟/關閉音效">
+          🔊
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- 主要視圖容器 (Main View Container) -->
+  <!-- ========================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ---------------------------------------- -->
+    <!-- 畫面 1: 年齡與年級選擇 (Screen: Grade Selection) -->
+    <!-- ---------------------------------------- -->
+    <section id="screen-grade-select" class="animate-fadeIn">
+      <div class="text-center max-w-3xl mx-auto mb-10">
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 mb-3 tracking-wide">
+          STEP 1 / 第一步
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          請選擇年齡與年級
+        </h2>
+        <p class="mt-3 text-base text-slate-600 leading-relaxed">
+          每個年齡都有量身打造的專屬解題思維！<br class="hidden sm:inline">
+          年紀越高，我們會啟用越嚴謹抽象的代數與數論方法；低年級則採用看圖秒懂的生活故事化比喻。進入後亦可隨時切換！
+        </p>
+      </div>
+
+      <!-- 各年級卡片網格 -->
+      <div id="grade-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- 由 app.renderGradeSelection() 動態生成 -->
+      </div>
+    </section>
+
+    <!-- ---------------------------------------- -->
+    <!-- 畫面 2: 競賽賽事選擇 (Screen: Competition Selection) -->
+    <!-- ---------------------------------------- -->
+    <section id="screen-competition-select" class="hidden animate-fadeIn">
+      <div class="text-center max-w-3xl mx-auto mb-8">
+        <div id="comp-grade-hint" class="mb-3">
+          <!-- 顯示當前選中的年級 -->
+        </div>
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 mb-2 tracking-wide">
+          STEP 2 / 第二步
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          請選擇要挑戰的賽事
+        </h2>
+        <p class="mt-2 text-base text-slate-600">
+          以全國最具公信力的「奧林匹亞初賽（收錄 10 年歷屆試題）」為核心，亦可拓展至國際頂尖盃賽！
+        </p>
+      </div>
+
+      <!-- 賽事卡片網格 -->
+      <div id="competition-cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <!-- 由 app.renderCompetitionSelection() 動態生成 -->
+      </div>
+    </section>
+
+    <!-- ---------------------------------------- -->
+    <!-- 畫面 3: 題庫主控台與試題研習 (Screen: Hub & Questions) -->
+    <!-- ---------------------------------------- -->
+    <section id="screen-hub" class="hidden animate-fadeIn space-y-6">
+      
+      <!-- 頂部數據與模式橫幅 -->
+      <div id="hub-stats-banner">
+        <!-- 由 app.renderStatsBanner() 動態生成 -->
+      </div>
+
+      <!-- 控制列：年份篩選、主題分類、四大解說風格切換 -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+        
+        <!-- 四大解析維度切換器 (最重要的核心特色) -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🎯</span>
+              <span>解析難度與思維視角切換（點擊即時變換所有題目的講解方式）：</span>
+            </span>
+          </div>
+          <div id="explanation-style-switcher" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <!-- 由 app.renderStyleSwitchTabs() 動態生成 -->
+          </div>
+        </div>
+
+        <div class="h-px bg-slate-100"></div>
+
+        <!-- 歷屆年份過濾 (10 年完整年份) -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-bold text-slate-500 shrink-0">歷屆年份：</span>
+          <div id="year-filter-container" class="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+            <!-- 由 app.renderYearFilterPills() 動態生成 -->
+          </div>
+        </div>
+
+        <!-- 知識模組主題過濾 -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-bold text-slate-500 shrink-0">主題模組：</span>
+          <div id="topic-filter-container" class="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+            <!-- 由 app.renderTopicFilterPills() 動態生成 -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 試題列表區塊 -->
+      <div id="question-cards-list" class="space-y-6">
+        <!-- 由 app.renderQuestionList() 動態生成題目卡片 -->
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- 懸浮手繪草稿紙彈窗 (Scratchpad Whiteboard Modal) -->
+  <!-- ========================================== -->
+  <div id="scratchpad-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white w-full max-w-4xl h-[82vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 animate-fadeIn">
+      
+      <!-- 草稿紙頂部工具列 -->
+      <div class="h-14 px-4 bg-slate-100 border-b border-slate-200 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">📝</span>
+          <span class="font-bold text-slate-800 text-sm">幾何算式草稿計算紙</span>
+          <span class="text-xs text-slate-400 hidden sm:inline">(支援滑鼠塗鴉與平板手寫)</span>
+        </div>
+
+        <!-- 工具列：畫筆、螢光筆、橡皮擦、清空、顏色選擇 -->
+        <div class="flex items-center gap-1.5">
+          <button onclick="scratchpad.setMode('pen');" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700">
+            ✏️ 鉛筆
+          </button>
+          <button onclick="scratchpad.setMode('highlighter');" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700">
+            🖍️ 螢光標記
+          </button>
+          <button onclick="scratchpad.setMode('eraser');" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700">
+            🧹 橡皮擦
+          </button>
+          
+          <div class="w-px h-5 bg-slate-300 mx-1"></div>
+
+          <!-- 調色盤 -->
+          <div class="flex items-center gap-1">
+            <button onclick="scratchpad.setColor('#2563eb')" class="w-5 h-5 rounded-full bg-blue-600 ring-1 ring-slate-300"></button>
+            <button onclick="scratchpad.setColor('#dc2626')" class="w-5 h-5 rounded-full bg-red-600 ring-1 ring-slate-300"></button>
+            <button onclick="scratchpad.setColor('#16a34a')" class="w-5 h-5 rounded-full bg-green-600 ring-1 ring-slate-300"></button>
+            <button onclick="scratchpad.setColor('#0f172a')" class="w-5 h-5 rounded-full bg-slate-900 ring-1 ring-slate-300"></button>
+          </div>
+
+          <div class="w-px h-5 bg-slate-300 mx-1"></div>
+
+          <button onclick="scratchpad.undo();" class="p-1.5 text-xs text-slate-600 hover:bg-slate-200 rounded-lg" title="復原">
+            ↩️
+          </button>
+          <button onclick="scratchpad.clear();" class="p-1.5 text-xs text-rose-600 hover:bg-rose-100 rounded-lg font-bold" title="清空全部">
+            🗑️ 清空
+          </button>
+        </div>
+
+        <button onclick="scratchpad.close()" class="p-1 text-slate-400 hover:text-slate-700 text-xl font-bold ml-2">
+          ✕
+        </button>
+      </div>
+
+      <!-- 畫布主體 -->
+      <div class="flex-1 relative bg-white overflow-hidden cursor-crosshair">
+        <canvas id="scratchpad-canvas" class="w-full h-full block"></canvas>
+      </div>
+
+      <!-- 底部提示 -->
+      <div class="h-9 px-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
+        <span>草稿紙可於解題時隨時拉起繪製幾何圖形或計算直式，關閉不會遺失筆跡。</span>
+        <button onclick="scratchpad.close()" class="font-bold text-blue-600 hover:underline">
+          收起草稿紙
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 多重視角對照實驗室彈窗 (Comparison Lab Modal) -->
+  <!-- ========================================== -->
+  <div id="comparison-lab-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white w-full max-w-5xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-y-auto border border-slate-200 animate-fadeIn">
+      <div id="comparison-lab-content">
+        <!-- 由 app.openLabModal() 動態注入 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 頁腳 (Footer) -->
+  <!-- ========================================== -->
+  <footer class="bg-white border-t border-slate-200 py-8 mt-12 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 space-y-2">
+      <p class="font-semibold text-slate-700 text-sm">
+        奧林匹亞數學初賽歷屆試題與多維難度解析系統
+      </p>
+      <p>
+        收錄 10 年歷屆試題真題庫（2017 ~ 2026）• 支援低中高各年級解說切換 • 100% 純前端靜態 HTML 無需伺服器
+      </p>
+      <p class="text-slate-400 pt-2">
+        Powered by Pure Static Modern Web & KaTeX Mathematical Typography
+      </p>
+    </div>
+  </footer>
+
+  <!-- 載入資料庫與腳本 -->
+  <script src="js/data/competitions.js"></script>
+  <script src="js/data/questions-g6.js"></script>
+  <script src="js/data/questions-other.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/scratchpad.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
